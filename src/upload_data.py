@@ -5,29 +5,40 @@ import re
 
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from pytz import timezone
+
+
+eastern = timezone('US/Eastern')
 
 
 def upload_data(args):
     dynamodb = boto3.resource('dynamodb')
 
-    #upload_jump_data(args, dynamodb)
-    #upload_impacts_data(args, dynamodb)
+    upload_jump_data(args, dynamodb)
+    upload_impacts_data(args, dynamodb)
 
 
 def upload_jump_data(args, dynamodb):
     # write jump records to DynamoDB
     table = dynamodb.Table(args.jumptable)
 
+    count = 0
     with open(args.jumpcsv, newline='') as csv_file:
         reader = csv.reader(csv_file)
 
         headers = ['datetime', 'date', 'time', 'session_type', 'player_name', 'height']
-        bad_headers = [headers[1], headers[2]]
+        bad_headers = [headers[1], headers[2], headers[3]]
         next(reader)  # throw away the header line
 
         for row in reader:
             item = {}
-            for i, val in enumerate(row):
+            try:
+                dt = datetime.strptime(f"{row[0].strip()[:-3] + row[0][-2:]}", '%Y-%m-%dT%H:%M:%S.%f%z')
+            except ValueError:  # not valid date
+                continue
+
+            item['datetime'] = str(dt.astimezone(eastern))
+            for i, val in enumerate(row[1:], start=1):
                 if not val:
                     continue
 
@@ -43,18 +54,22 @@ def upload_jump_data(args, dynamodb):
             if item:
                 for bad_key in bad_headers:
                     del item[bad_key]
+                item['match'] = args.jumpcsv.startswith('match')
                 table.put_item(Item=item)
+                count += 1
+    print(f"put {count} items into {args.jumptable}")
 
 
 def upload_impacts_data(args, dynamodb):
     # write impact records to DynamoDB
     table = dynamodb.Table(args.impactstable)
 
+    count = 0
     with open(args.impactscsv, newline='') as csv_file:
         reader = csv.reader(csv_file)
 
-        headers = ['datetime', 'time', 'session_type', 'player_name', 'height']
-        bad_headers = [headers[1]]
+        headers = ['datetime', 'time', 'session_type', 'gforce', 'player_name']
+        bad_headers = [headers[1], headers[2]]
         next(reader)  # throw away the header line
 
         for row in reader:
@@ -64,27 +79,29 @@ def upload_impacts_data(args, dynamodb):
             except ValueError:  # not valid date
                 continue
 
-            stamp = dt.strftime('%Y-%m-%dT%H:%M:%S.%f %z')
-            print(stamp)
-            #   2018-10-27T14:24:24.212-04:00
+            item['datetime'] = str(dt.astimezone(eastern))
+            for i, val in enumerate(row[1:], start=1):
+                if not val:
+                    continue
 
-            # for i, val in enumerate(row[2:]):
-            #     if not val:
-            #         continue
+                try:
+                    # change str to decimal if possible
+                    val = Decimal(val)
+                except InvalidOperation:
+                    # otherwise, strip trailing and leading whitespace in str
+                    val = val.strip()
 
-            #     try:
-            #         # change str to decimal if possible
-            #         val = Decimal(val)
-            #     except InvalidOperation:
-            #         # otherwise, strip trailing and leading whitespace in str
-            #         val = val.strip()
+                item[headers[i]] = val
 
-            #     item[headers[i]] = val
+            if item:
+                for bad_key in bad_headers:
+                    del item[bad_key]
+                item['match'] = args.impactscsv.startswith('match')
+                table.put_item(Item=item)
+                count += 1
 
-            # if item:
-            #     for bad_key in bad_headers:
-            #         del item[bad_key]
-            #     table.put_item(Item=item)
+    print(f"put {count} items into {args.impactstable}")
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Upload GT Volleyball Data')
