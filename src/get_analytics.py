@@ -61,6 +61,8 @@ def email_coaches():
     pass
 
 if __name__ == "__main__":
+    print(pd.read_csv("../data/match_nc_state_load_summary_clean.csv"))
+    '''
     df_jump = pd.read_csv("../data/2017_GAMES_JUMP_MASTER.csv", index_col=1)
     players = set(df_jump['player name'].values)
     if not os.path.exists("../stats"):
@@ -74,3 +76,4 @@ if __name__ == "__main__":
     for player in players:
         get_impact_data(player, '10/1/2017', '11/24/2017')
     # get_impact_data("Sam Knapp", '10/1/2017', '11/24/2017')
+    '''
