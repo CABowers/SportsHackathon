@@ -54,6 +54,10 @@ def get_impact_data(player, start_date, end_date=None):
     plt.savefig("../stats/" + player + "/GForce.png")
     plt.cla()
 
+def get_summary_data(player, start_date, end_date):
+
+    pass
+
 def email_players():
     pass
 
