@@ -11,7 +11,8 @@ from pytz import timezone
 eastern = timezone('US/Eastern')
 
 
-def upload_data(args):
+def main():
+    args = parse_args()
     dynamodb = boto3.resource('dynamodb')
 
     upload_jump_data(args, dynamodb)
@@ -129,6 +130,4 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    args = parse_args()
-
-    upload_data(args)
+    main()
