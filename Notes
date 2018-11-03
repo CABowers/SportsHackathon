@@ -1,0 +1,10 @@
+Energy to jump ratio , high-energy vs low_energy jumps
+
+Buzzboard
+
+- python get_analytics.py <start_date> <end_date> <email_players> <email_coaches>
+- python uploud_data.py 
+
+
+Get players story for the season
+
