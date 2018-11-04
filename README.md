@@ -27,3 +27,7 @@ The creation of a product that used multiple backgrounds to produce a product th
 ## What we learned
 The importance of communication in a team where there are multiple objectives. If the communication is clear everybody will be able to understand the direction of the project. Working in an interdisciplinary team allows all the students to discuss their ideas in a way that they would not noramally discuss which leads to a greater understanding of the entire project.
 
+## Other
+Here is our [user experience.](https://projects.invisionapp.com/share/CFOXMGJX9WJ)
+
+
