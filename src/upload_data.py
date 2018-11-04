@@ -17,6 +17,7 @@ def main():
 
     upload_jump_data(args, dynamodb)
     upload_impacts_data(args, dynamodb)
+    upload_summary_data(args, dynamodb)
 
 
 def upload_jump_data(args, dynamodb):
@@ -104,6 +105,55 @@ def upload_impacts_data(args, dynamodb):
     print(f"put {count} items into {args.impactstable}")
 
 
+def upload_summary_data(args, dynamodb):
+    content = ''
+    with open(args.summarycsv) as f:
+        is_table = False
+        date = ''
+        for line in f:
+            if "Event Start" in line:
+                date = line.split(",")[-1].split(" ")[0]
+            if is_table and len(line.strip()) == 0:
+                break
+
+            if line.split(',')[0].strip() == "Player Name":
+                is_table = True
+                content += line.strip() + ",date\n"
+            elif is_table:
+                content += line.strip() + "," + date + "\n"
+
+    clean_filename = ".".join(args.summarycsv.split(".")[:-1]) + "_clean.csv"
+    with open(clean_filename, 'w+') as f:
+        f.write(content)
+
+    # write jump records to DynamoDB
+    table = dynamodb.Table(args.summarytable)
+    count = 0
+    with open(clean_filename) as f:
+        reader = csv.DictReader(f)
+
+        for line in reader:
+            item = dict(line)
+            if not item:
+                continue
+
+            for key in item:
+                val = item[key]
+                try:
+                    # change str to decimal if possible
+                    val = Decimal(val)
+                except InvalidOperation:
+                    # otherwise, strip trailing and leading whitespace in str
+                    val = val.strip()
+                item[key] = val
+
+            item['match'] = args.summarycsv.startswith('match')
+            table.put_item(Item=item)
+            count += 1
+
+    print(f"put {count} items into {args.summarytable}")
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='Upload GT Volleyball Data')
     parser.add_argument('--jumpcsv',
@@ -118,12 +168,12 @@ def parse_args():
     parser.add_argument('--impactstable',
                         default='gtvolleyball-data-impacts',
                         help='DynamoDB table name for impacts data')
-    # parser.add_argument('--summarycsv',
-    #                     required=True,
-    #                     help='path to summary csv file')
-    # parser.add_argument('--summarytable',
-    #                     default='gtvolleyball-data-summary',
-    #                     help='DynamoDB table name for summary data')
+    parser.add_argument('--summarycsv',
+                        required=True,
+                        help='path to summary csv file')
+    parser.add_argument('--summarytable',
+                        default='gtvolleyball-data-summary',
+                        help='DynamoDB table name for summary data')
 
     args = parser.parse_args()
     return args
