@@ -8,7 +8,9 @@ import re
 def get_jump_data(player, start_date, end_date=None):
     if not os.path.exists("../stats/" + player):
         os.mkdir("../stats/" + player)
+    kind="line"
     if end_date is None:
+        kind="bar"
         end_date = start_date
     
     df_jump = pd.read_csv("../data/2017_GAMES_JUMP_MASTER.csv", index_col=1)
@@ -36,7 +38,7 @@ def get_jump_data(player, start_date, end_date=None):
         player_jump_data = df_jump_average.loc[(df_jump_average['player name'] == player)]
         del player_jump_data['player name']
         player_jump_data = player_jump_data.set_index('date')
-        ax = player_jump_data.join(team_jump_average).plot(title="Mean Jump Height for " + player)		    		  		  		    	 		 		   		 		  
+        ax = player_jump_data.join(team_jump_average).plot(title="Mean Jump Height for " + player, kind=kind)		    		  		  		    	 		 		   		 		  
         ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
         ax.set_ylabel('height') 
         plt.savefig("../stats/" + player + "/Jump_Height.png")
@@ -47,7 +49,9 @@ def get_jump_data(player, start_date, end_date=None):
 def get_impact_data(player, start_date, end_date=None):
     if not os.path.exists("../stats/" + player):
         os.mkdir("../stats/" + player)
+    kind="line"
     if end_date is None:
+        kind="bar"
         end_date = start_date
     
     df_impact = pd.read_csv("../data/2017_GAME_IMPACT_MASTER.csv", index_col=0)
@@ -72,7 +76,7 @@ def get_impact_data(player, start_date, end_date=None):
         player_impact_data = df_impact_average.loc[(df_impact_average['player name'] == player)]
         del player_impact_data['player name']
         player_impact_data = player_impact_data.set_index('date')
-        ax = player_impact_data.join(team_impact_average).plot(title="Mean GForce for " + player)		    		  		  		    	 		 		   		 		  
+        ax = player_impact_data.join(team_impact_average).plot(title="Mean GForce for " + player, kind=kind)		    		  		  		    	 		 		   		 		  
         ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
         ax.set_ylabel('GForce') 
         plt.savefig("../stats/" + player + "/GForce.png")
@@ -81,19 +85,33 @@ def get_impact_data(player, start_date, end_date=None):
 def get_summary_data(player, attribute, start_date, end_date):
     if not os.path.exists("../stats/" + player):
         os.mkdir("../stats/" + player)
+    kind="line"
     if end_date is None:
+        kind="bar"
         end_date = start_date
     
     df_summary = pd.read_csv("../data/master_summary.csv", index_col=20)
+    df_box = pd.read_csv("../data/box_score_master.csv", index_col=1)
     df_summary.index = pd.to_datetime(df_summary.index)
     df_summary["Energy per Inched Jump"] = df_summary["Kinetic Energy (Joules/Pound)"] / (df_summary["Jumps"] * df_summary["Avg Jump (in)"])
+    
     df_summary = df_summary[start_date: end_date].replace(np.inf, np.NaN).replace(0, np.NaN)
 
-    
     team_attribute_average = df_summary.groupby(['date'])[attribute].mean().reset_index(name='Team').set_index('date')
+    if player == "Team":
+        df_attribute_average = df_summary.groupby(['Player Name'])[attribute].mean().reset_index(name=attribute)
+        df_attribute_average = df_attribute_average.set_index("Player Name")
+        title = attribute.split("(")[0]
+        ax = df_attribute_average.plot(x=None, y=None, title=attribute + " for " + player, kind="pie", subplots=True, legend=False, sharey=False, sharex=False)		    		  		  		    	 		 		   		 		  
+        plt.axes().set_ylabel('')
+        plt.savefig("../stats/" + player + "/"+ title +".png")
+        plt.close()
+        return
+    
     player_data = df_summary.loc[(df_summary['Player Name'] == player)]
     player_data = player_data[start_date : end_date]
-    
+
+
     if not player_data.empty:
 
         df_attribute_average = df_summary.groupby(['date', 'Player Name'])[attribute].mean().reset_index(name=player)
@@ -101,15 +119,64 @@ def get_summary_data(player, attribute, start_date, end_date):
         del player_attribute_data['Player Name']
         player_attribute_data = player_attribute_data.set_index('date')
         title = attribute.split("(")[0]
-        ax = player_attribute_data.join(team_attribute_average).plot(title=title + " for " + player)		    		  		  		    	 		 		   		 		  
+        ax = player_attribute_data.join(team_attribute_average).plot(title=title + " for " + player, kind=kind)		    		  		  		    	 		 		   		 		  
         ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
         ax.set_ylabel(attribute) 
         plt.savefig("../stats/" + player + "/"+ title +".png")
         plt.close()
 
 
+def get_box_data(player, attribute, start_date, end_date):
+    if not os.path.exists("../stats/" + player):
+        os.mkdir("../stats/" + player)
+    kind="line"
+    if end_date is None:
+        kind="bar"
+        end_date = start_date
+    
+    df_summary = pd.read_csv("../data/box_score_master.csv", index_col=1)
+    df_summary.index = pd.to_datetime(df_summary.index)
+    # print(df_summary)
+    player_data = df_summary.loc[(df_summary['Player'] == player)]
+    player_data = player_data[start_date : end_date]
+    totals = df_summary.loc[(df_summary['Player'] == "Totals")][start_date : end_date]
+    df_summary = df_summary[start_date : end_date]
+    if not player_data.empty:
+        
+        df_attribute_average = df_summary.groupby(['Game_Date', 'Player'])[attribute].mean().reset_index(name=player)
+        player_attribute_data = df_attribute_average.loc[(df_attribute_average['Player'] == player)]
+        df_attribute_average = df_summary.groupby(['Game_Date', 'Player'])[attribute].mean().reset_index(name="Total")
+        total_attribute_data = df_attribute_average.loc[(df_attribute_average['Player'] == 'Totals')]
+        df_summary = df_summary[df_summary["Player"] != "Totals"]
+        df_average = df_summary.groupby(['Game_Date'])[attribute].mean().reset_index(name="Team AVG")
+        del player_attribute_data['Player']
+        del total_attribute_data['Player']
+        player_attribute_data = player_attribute_data.set_index('Game_Date')
+        total_attribute_data = total_attribute_data.set_index('Game_Date')
+        df_average = df_average.set_index("Game_Date")
+        ax = player_attribute_data.join(df_average).plot(title=attribute + " for " + player, kind=kind)		    		  		  		    	 		 		   		 		  
+        ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
+        ax.set_ylabel(attribute) 
+        plt.savefig("../stats/" + player + "/"+ attribute +".png")
+        plt.close()
+
+def get_profiency(player, start_date, end_date):
+    if not os.path.exists("../stats/" + player):
+        os.mkdir("../stats/" + player)
+    kind="line"
+    if end_date is None:
+        kind="bar"
+        end_date = start_date
+    
+    df_summary = pd.read_csv("../data/master_summary.csv", index_col=20)
+    df_box = pd.read_csv("../data/box_score_master.csv", index_col=1)
+    
+    # df_summary["Proficiency (Energy/attempt)"] = df_summary["Kinetic Energy (Joules/Pound)"] / df_box["TA"]
+
 if __name__ == "__main__":
-    # get_summary_data('Coral Kazaroff', 'Load Sum', '10/01/2017', '11/28/2017')
+    # get_summary_data("Team", "Kinetic Energy (Joules/Pound)",'10/01/2017', '11/28/2017')
+    # get_box_data('Kodie Comby', 'K', '10/1/2017 0:00', '11/24/2017 0:00')
+    get_summary_data('Coral Kazaroff', 'Proficiency (Energy/attempt)', '10/01/2017', '11/28/2017')
     # get_jump_data("Gabby Benda", '10/01/2017', '11/28/2017')
     
     # df_jump = pd.read_csv("../data/2017_GAMES_JUMP_MASTER.csv", index_col=1)
