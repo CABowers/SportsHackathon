@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt 
 import os
+import re
 
 
 def get_jump_data(player, start_date, end_date=None):
@@ -22,7 +23,7 @@ def get_jump_data(player, start_date, end_date=None):
         ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
         ax.set_ylabel('height') 
         plt.savefig("../stats/" + player + "/Jump_Height.png")
-        plt.cla()
+        plt.close()
     else:
 
         player_data = df_jump.loc[(df_jump['player name'] == player)]
@@ -39,7 +40,7 @@ def get_jump_data(player, start_date, end_date=None):
         ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
         ax.set_ylabel('height') 
         plt.savefig("../stats/" + player + "/Jump_Height.png")
-        plt.cla()
+        plt.close()
 
     
 
@@ -60,7 +61,7 @@ def get_impact_data(player, start_date, end_date=None):
         ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
         ax.set_ylabel('height') 
         plt.savefig("../stats/" + player + "/GForce.png")
-        plt.cla()
+        plt.close()
     else:
         player_data = df_impact.loc[(df_impact['player name'] == player)]
         player_data = player_data[start_date : end_date]
@@ -75,47 +76,62 @@ def get_impact_data(player, start_date, end_date=None):
         ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
         ax.set_ylabel('GForce') 
         plt.savefig("../stats/" + player + "/GForce.png")
-        plt.cla()
+        plt.close()
 
-def get_summary_data(player, start_date, end_date):
+def get_summary_data(player, attribute, start_date, end_date):
     if not os.path.exists("../stats/" + player):
         os.mkdir("../stats/" + player)
     if end_date is None:
         end_date = start_date
     
-    df_summary = pd.read_csv("../data/match_nc_state_load_summary_clean.csv", index_col=20)
-    # df_summary = df_impact.loc[:, ~df_impact.columns.str.contains('^Unnamed')]
+    df_summary = pd.read_csv("../data/master_summary.csv", index_col=20)
     df_summary.index = pd.to_datetime(df_summary.index)
     df_summary["Energy per Inched Jump"] = df_summary["Kinetic Energy (Joules/Pound)"] / (df_summary["Jumps"] * df_summary["Avg Jump (in)"])
+    df_summary = df_summary[start_date: end_date].replace(np.inf, np.NaN).replace(0, np.NaN)
 
-    print(df_summary[["Player Name","Energy per Inch Jump"]])
+    
+    team_attribute_average = df_summary.groupby(['date'])[attribute].mean().reset_index(name='Team').set_index('date')
     player_data = df_summary.loc[(df_summary['Player Name'] == player)]
     player_data = player_data[start_date : end_date]
-    player_data["Energy per Jump Inch"] = player_data["Kinetic Energy (Joules/Pound)"] / (player_data["Jumps"] * player_data["Avg Jump (in)"])
     
-def get_stats_fancy():
-    pass
+    if not player_data.empty:
 
-def email_players():
-    pass
+        df_attribute_average = df_summary.groupby(['date', 'Player Name'])[attribute].mean().reset_index(name=player)
+        player_attribute_data = df_attribute_average.loc[(df_attribute_average['Player Name'] == player)]
+        del player_attribute_data['Player Name']
+        player_attribute_data = player_attribute_data.set_index('date')
+        title = attribute.split("(")[0]
+        ax = player_attribute_data.join(team_attribute_average).plot(title=title + " for " + player)		    		  		  		    	 		 		   		 		  
+        ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
+        ax.set_ylabel(attribute) 
+        plt.savefig("../stats/" + player + "/"+ title +".png")
+        plt.close()
 
-def email_coaches():
-    pass
 
 if __name__ == "__main__":
+    # get_summary_data('Coral Kazaroff', 'Load Sum', '10/01/2017', '11/28/2017')
     # get_jump_data("Gabby Benda", '10/01/2017', '11/28/2017')
     
-    df_jump = pd.read_csv("../data/2017_GAMES_JUMP_MASTER.csv", index_col=1)
-    players = set(df_jump['player name'].values)
-    if not os.path.exists("../stats"):
-        os.mkdir("../stats")
-    for player in players:
-        get_jump_data(player, '10/1/2017', '11/24/2017')
-    # print(players)
-    df_impact = pd.read_csv("../data/2017_GAME_IMPACT_MASTER.csv", index_col=1)
-    players = set(df_impact['player name'].values)
-    # print(players)
-    for player in players:
-        get_impact_data(player, '10/1/2017', '11/24/2017')
+    # df_jump = pd.read_csv("../data/2017_GAMES_JUMP_MASTER.csv", index_col=1)
+    # players = set(df_jump['player name'].values)
+    # if not os.path.exists("../stats"):
+    #     os.mkdir("../stats")
+    # for player in players:
+    #     get_jump_data(player, '10/1/2017', '11/24/2017')
+    # # print(players)
+    # df_impact = pd.read_csv("../data/2017_GAME_IMPACT_MASTER.csv", index_col=1)
+    # players = set(df_impact['player name'].values)
+    # # print(players)
+    # for player in players:
+    #     get_impact_data(player, '10/1/2017', '11/24/2017')
+    # df_summary = pd.read_csv("../data/master_summary.csv", index_col=1)
+    # players = set(df_summary['Player Name'].values)
+    # attributes = df_summary.columns.values
+    # # print(players)
+    # for player in players:
+    #     for attr in attributes:
+    #         if attr not in ["date", "Player Name"]:
+    #             get_summary_data(player, attr,'10/1/2017', '11/24/2017')
+    
     
     
