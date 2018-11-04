@@ -54,7 +54,9 @@ def get_impact_data(player, start_date, end_date=None):
         kind="bar"
         end_date = start_date
     
-    df_impact = pd.read_csv("../data/2017_GAME_IMPACT_MASTER.csv", index_col=0)
+    # df_impact = pd.read_csv("../data/2017_GAME_IMPACT_MASTER.csv", index_col=0)
+    df_impact = pd.read_csv("../data/match_impact_master.csv", index_col=0)
+
     df_impact = df_impact.loc[:, ~df_impact.columns.str.contains('^Unnamed')]
     df_impact.index = pd.to_datetime(df_impact.index)
     
@@ -168,37 +170,58 @@ def get_profiency(player, start_date, end_date):
         kind="bar"
         end_date = start_date
     
-    df_summary = pd.read_csv("../data/master_summary.csv", index_col=20)
-    df_box = pd.read_csv("../data/box_score_master.csv", index_col=1)
-    
-    # df_summary["Proficiency (Energy/attempt)"] = df_summary["Kinetic Energy (Joules/Pound)"] / df_box["TA"]
+    df_summary = pd.read_csv("../data/master_summary.csv", index_col=[20, 0])
+    df_box = pd.read_csv("../data/box_score_master.csv", index_col=[1,6])
+    df_box.index = df_box.index.set_names('Player Name', level=1)
+    df_box.index = df_box.index.set_names('date', level=0)
+    # print(df_box)
+    df_summary.index = df_summary.index.set_levels([pd.to_datetime(df_summary.index.levels[0]), df_summary.index.levels[1]])
+    df_box.index = df_box.index.set_levels([pd.to_datetime(df_box.index.levels[0]), df_box.index.levels[1]])
+    # print(df_summary)
+    # merged = pd.merge(df_box.reset_index(),df_summary.reset_index(),on=['date','second'])
+    # result = merged['0_x']*merged['0_y']
+    # result.index = s1.index
+
+    df_summary["Proficiency (Energy/attempt)"] = (df_summary["Kinetic Energy (Joules/Pound)"] / df_box["TA"])
+    df_summary = df_summary.reset_index().set_index("date")[start_date : end_date]
+
+    df_attribute_average = df_summary.groupby(['date', 'Player Name'])["Proficiency (Energy/attempt)"].mean().reset_index(name=player)
+    player_attribute_data = df_attribute_average.loc[(df_attribute_average['Player Name'] == player)]
+    del player_attribute_data['Player Name']
+    player_attribute_data = player_attribute_data.set_index('date')
+    player_attribute_data.index = player_attribute_data.index.date
+
+    ax = player_attribute_data.plot(title="Proficiency", kind="bar")
+    ax.set_xlabel("Date")  		   	  			    		  		  		    	 		 		   		 		  
+    ax.set_ylabel("Proficiency (Energy/attempt)") 
+    plt.savefig("../stats/" + player + "/Proficiency.png")
+    plt.close()
 
 if __name__ == "__main__":
     # get_summary_data("Team", "Kinetic Energy (Joules/Pound)",'10/01/2017', '11/28/2017')
     # get_box_data('Kodie Comby', 'K', '10/1/2017 0:00', '11/24/2017 0:00')
-    get_summary_data('Coral Kazaroff', 'Proficiency (Energy/attempt)', '10/01/2017', '11/28/2017')
+    # get_profiency('Cori Clifton', '10/20/2017', '11/28/2017')
     # get_jump_data("Gabby Benda", '10/01/2017', '11/28/2017')
+    # get_summary_data("Kodie Comby", "Energy per Inched Jump",'10/01/2017', '11/28/2017')
+    # get_impact_data('Kodie Comby', '10/1/2017', '11/24/2017')
     
-    # df_jump = pd.read_csv("../data/2017_GAMES_JUMP_MASTER.csv", index_col=1)
-    # players = set(df_jump['player name'].values)
-    # if not os.path.exists("../stats"):
-    #     os.mkdir("../stats")
-    # for player in players:
-    #     get_jump_data(player, '10/1/2017', '11/24/2017')
-    # # print(players)
-    # df_impact = pd.read_csv("../data/2017_GAME_IMPACT_MASTER.csv", index_col=1)
-    # players = set(df_impact['player name'].values)
-    # # print(players)
-    # for player in players:
-    #     get_impact_data(player, '10/1/2017', '11/24/2017')
-    # df_summary = pd.read_csv("../data/master_summary.csv", index_col=1)
-    # players = set(df_summary['Player Name'].values)
-    # attributes = df_summary.columns.values
-    # # print(players)
-    # for player in players:
-    #     for attr in attributes:
-    #         if attr not in ["date", "Player Name"]:
-    #             get_summary_data(player, attr,'10/1/2017', '11/24/2017')
+    df_jump = pd.read_csv("../data/2017_GAMES_JUMP_MASTER.csv", index_col=1)
+    players = set(df_jump['player name'].values)
+    if not os.path.exists("../stats"):
+        os.mkdir("../stats")
+    for player in players:
+        get_jump_data(player, '10/1/2017', '11/24/2017')
+    df_impact = pd.read_csv("../data/2017_GAME_IMPACT_MASTER.csv", index_col=1)
+    players = set(df_impact['player name'].values)
+    for player in players:
+        get_impact_data(player, '10/1/2017', '11/24/2017')
+    df_summary = pd.read_csv("../data/master_summary.csv", index_col=1)
+    players = set(df_summary['Player Name'].values)
+    attributes = df_summary.columns.values
+    for player in players:
+        for attr in attributes:
+            if attr not in ["date", "Player Name"]:
+                get_summary_data(player, attr,'10/1/2017', '11/24/2017')
     
     
     
