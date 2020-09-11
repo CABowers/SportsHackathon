@@ -1,5 +1,7 @@
 
 ![NetPositive Logo](src/logo.PNG)
+## Background
+Winner of the Sports Innovation Challenge. Check out our [devpost submission!](https://devpost.com/software/sportshackathon)
 
 ## Inspiration
 Georgia Tech's volleyball team uses a wearable called myVERT, which they wear during games and practices. This wearable tracks jump height and impact velocity. Coaches would like to use this data to help them better train the team, but sifting through hundreds of thousands of lines of data and analyzing it is not in their job description. Instead, NetPositive helps surface the valuable data insights that coaches care about, allowing coaches to make data-driven recommendations for their players. 
